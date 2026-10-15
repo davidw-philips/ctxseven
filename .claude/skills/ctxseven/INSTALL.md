@@ -1,3 +1,16 @@
+
+## Enterprise TLS certificates
+
+The CLI verifies HTTPS certificates. For networks that use TLS inspection, set a trusted enterprise CA bundle before running it:
+
+```powershell
+$env:SSL_CERT_FILE = 'C:\path\to\corporate-ca-bundle.pem'
+# Or use a directory containing hashed CA certificates:
+$env:SSL_CERT_DIR = 'C:\path\to\corporate-ca-directory'
+ctxseven --help
+```
+
+Keep certificate verification enabled. The variables are passed through automatically when `ctxseven` is launched from an MCP host.
 # Install `ctxseven`
 
 ```bash

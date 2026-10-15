@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import ssl
 import sys
 import urllib.error
 import urllib.request
@@ -12,6 +13,14 @@ from typing import Any, Dict, List, Optional
 
 MCP_URL = os.environ.get("CTXSEVEN_ENDPOINT", "https://mcp.context7.com/mcp")
 USER_AGENT = "ctxseven-cli/0.1.0 (+https://github.com/davidw-philips/ctxseven)"
+
+
+def ssl_context() -> ssl.SSLContext:
+    """Build a verified TLS context using optional CA environment overrides."""
+    return ssl.create_default_context(
+        cafile=os.environ.get("SSL_CERT_FILE") or None,
+        capath=os.environ.get("SSL_CERT_DIR") or None,
+    )
 
 
 def get_api_key() -> str:
@@ -47,14 +56,17 @@ def rpc_request(method: str, params: Optional[Dict[str, Any]] = None) -> Dict[st
     )
 
     try:
-        with urllib.request.urlopen(request, timeout=60) as response:
+        with urllib.request.urlopen(request, timeout=60, context=ssl_context()) as response:
             raw_response = response.read().decode("utf-8")
     except urllib.error.HTTPError as error:
         body = error.read().decode("utf-8", errors="replace")
         print(f"HTTP {error.code} calling Context7 MCP: {body}", file=sys.stderr)
         sys.exit(1)
     except urllib.error.URLError as error:
-        print(f"Network error calling Context7 MCP: {error.reason}", file=sys.stderr)
+        message = str(error.reason)
+        if "CERTIFICATE_VERIFY_FAILED" in message:
+            message += " Set SSL_CERT_FILE or SSL_CERT_DIR to a trusted CA bundle."
+        print(f"Network error calling Context7 MCP: {message}", file=sys.stderr)
         sys.exit(1)
 
     for line in raw_response.splitlines():
